@@ -5,12 +5,12 @@ import { supabaseBrowser } from '@/lib/supabase-client';
 export default function LoginPage() {
   async function signIn() {
     const supabase = supabaseBrowser();
-    const redirectTo = `${window.location.origin}/auth/callback`;
-
 
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: {
+        redirectTo: `${window.location.origin}/today`,
+      },
     });
   }
 
