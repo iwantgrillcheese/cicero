@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase-server';
 import CompassForm from './compassForm';
 
+export const dynamic = 'force-dynamic';
+
+
 export default async function CompassPage() {
   const supabase = await supabaseServer();
   const { data: userData } = await supabase.auth.getUser();

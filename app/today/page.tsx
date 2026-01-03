@@ -5,6 +5,10 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { pickDailyVirtue } from '@/lib/virtues';
 import TodayForm from './todayForm';
 
+
+export const dynamic = 'force-dynamic';
+
+
 function isoDate(d: Date) {
   return format(d, 'yyyy-MM-dd');
 }

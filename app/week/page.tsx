@@ -4,6 +4,9 @@ import { format, startOfWeek } from 'date-fns';
 import { supabaseServer } from '@/lib/supabase-server';
 import WeeklyForm from './weeklyForm';
 
+export const dynamic = 'force-dynamic';
+
+
 function isoDate(d: Date) {
   return format(d, 'yyyy-MM-dd');
 }
