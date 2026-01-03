@@ -98,6 +98,11 @@ export default async function TodayPage() {
         >
           Weekly Examination
         </Link>
+
+        <Link href="/foundations" className="underline text-sm font-medium text-neutral-700">
+  Foundations
+</Link>
+
       </footer>
     </main>
   );
