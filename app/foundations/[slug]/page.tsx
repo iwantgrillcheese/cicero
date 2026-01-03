@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase-server';
 import ReflectionEditor from './reflectionEditor';
-
 
 export const dynamic = 'force-dynamic';
 
@@ -20,106 +19,122 @@ type Excerpt = {
   id: string;
   source: string;
   excerpt: string;
-  order_index: number;
 };
 
-export default async function EntryPage({ params }: { params: { slug: string } }) {
+export default async function FoundationEntryPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const supabase = await supabaseServer();
-
-  const { data: entry } = await supabase
-    .from('philosophy_entries')
-    .select('id,slug,era,title,subtitle,context,question')
-    .eq('slug', params.slug)
-    .maybeSingle();
-
-  if (!entry) return notFound();
-
-  const { data: excerpts } = await supabase
-    .from('philosophy_excerpts')
-    .select('id,source,excerpt,order_index')
-    .eq('entry_id', (entry as Entry).id)
-    .order('order_index', { ascending: true });
-
   const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  if (!userData.user) redirect('/login');
 
-  let reflectionBody = '';
-  if (user) {
-    const { data: reflection } = await supabase
-      .from('philosophy_reflections')
-      .select('body')
-      .eq('user_id', user.id)
-      .eq('entry_id', (entry as Entry).id)
-      .maybeSingle();
+  const slug = params.slug;
 
-    reflectionBody = reflection?.body ?? '';
+  // 1) Fetch the entry ONLY (no joins, no embeds)
+  const { data: entry, error: entryErr } = await supabase
+    .from('foundations_entries')
+    .select('id,slug,era,title,subtitle,context,question')
+    .eq('slug', slug)
+    .maybeSingle<Entry>();
+
+  if (entryErr) {
+    // helpful during dev; you can soften later
+    throw new Error(entryErr.message);
   }
 
+  if (!entry) notFound();
+
+  // 2) Fetch excerpts separately (so missing excerpts doesn't 404 the whole page)
+  const { data: excerpts } = await supabase
+    .from('foundations_excerpts')
+    .select('id,source,excerpt')
+    .eq('entry_id', entry.id)
+    .order('created_at', { ascending: true });
+
+  // 3) Fetch the user’s reflection separately (optional)
+  const { data: reflectionRow } = await supabase
+    .from('foundations_reflections')
+    .select('id,reflection')
+    .eq('user_id', userData.user.id)
+    .eq('entry_id', entry.id)
+    .maybeSingle();
+
   return (
-    <main className="mx-auto max-w-md px-5 py-10">
+    <main className="mx-auto max-w-2xl px-5 py-10">
       <header className="flex items-start justify-between">
         <div>
-          <Link href="/foundations" className="text-sm font-medium text-neutral-700 underline">
+          <Link href="/foundations" className="text-sm text-neutral-600 underline">
             Foundations
           </Link>
-          <h1 className="mt-3 text-xl font-semibold tracking-tight">{(entry as Entry).title}</h1>
-          {(entry as Entry).subtitle ? (
-            <p className="mt-2 text-sm text-neutral-600">{(entry as Entry).subtitle}</p>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight">{entry.title}</h1>
+          {entry.subtitle ? (
+            <p className="mt-2 text-sm text-neutral-600">{entry.subtitle}</p>
           ) : null}
         </div>
-        <Link href="/today" className="text-sm font-medium text-neutral-700 underline">
+
+        <Link href="/today" className="text-sm text-neutral-700 underline">
           Today
         </Link>
       </header>
 
-      <section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5">
+      <section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Context
         </div>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-800">
-          {(entry as Entry).context}
-        </p>
+        <div className="prose prose-neutral mt-3 max-w-none">
+          <p>{entry.context}</p>
+        </div>
       </section>
 
-      <section className="mt-6 space-y-3">
-        {(excerpts as Excerpt[] | null)?.map((ex) => (
-          <div key={ex.id} className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              Primary text
-            </div>
-            <div className="mt-2 text-xs text-neutral-500">{ex.source}</div>
-            <blockquote className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-900">
-              “{ex.excerpt}”
-            </blockquote>
+      <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Primary Text
+        </div>
+
+        {excerpts && excerpts.length > 0 ? (
+          <div className="mt-4 space-y-5">
+            {excerpts.map((ex: any) => (
+              <figure key={ex.id} className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
+                <blockquote className="text-sm leading-relaxed text-neutral-800">
+                  {ex.excerpt}
+                </blockquote>
+                <figcaption className="mt-3 text-xs text-neutral-500">
+                  {ex.source}
+                </figcaption>
+              </figure>
+            ))}
           </div>
-        ))}
+        ) : (
+          <p className="mt-3 text-sm text-neutral-600">
+            No excerpts added yet.
+          </p>
+        )}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
+      <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Question
         </div>
-        <p className="mt-3 text-sm leading-6 text-neutral-900">{(entry as Entry).question}</p>
+        <p className="mt-3 text-base font-medium text-neutral-900">{entry.question}</p>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5">
-        <div className="text-sm font-semibold">Your notes (private)</div>
-        <p className="mt-1 text-xs text-neutral-500">
-          This is for you. Write plainly. Save if you want.
+      <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Your reflection
+        </div>
+        <p className="mt-2 text-sm text-neutral-600">
+          Write like it’s private. Because it is.
         </p>
 
-        {user ? (
-          <ReflectionEditor entryId={(entry as Entry).id} initialBody={reflectionBody} />
-        ) : (
-          <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
-            Sign in to save notes. You can still read everything.
-            <div className="mt-3">
-              <Link href="/login" className="font-medium underline">
-                Sign in
-              </Link>
-            </div>
-          </div>
-        )}
+        <div className="mt-4">
+          <ReflectionEditor
+  entryId={entry.id}
+  initialBody={reflectionRow?.reflection ?? ''}
+/>
+
+        </div>
       </section>
     </main>
   );
