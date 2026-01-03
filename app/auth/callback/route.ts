@@ -1,9 +1,18 @@
-// middleware.ts
+// app/auth/callback/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const code = url.searchParams.get('code');
+
+  if (!code) {
+    return NextResponse.redirect(new URL('/login', url.origin));
+  }
+
+  const res = NextResponse.redirect(new URL('/today', url.origin));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,12 +31,11 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Refresh session cookies if needed
-  await supabase.auth.getUser();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    return NextResponse.redirect(new URL('/login?e=oauth', url.origin));
+  }
 
   return res;
 }
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-};

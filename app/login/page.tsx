@@ -1,6 +1,9 @@
+// app/login/page.tsx
 'use client';
 
 import { supabaseBrowser } from '@/lib/supabase-client';
+
+export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   async function signIn() {
@@ -9,7 +12,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/today`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
   }
