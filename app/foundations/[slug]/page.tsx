@@ -15,12 +15,6 @@ type Entry = {
   question: string;
 };
 
-type Excerpt = {
-  id: string;
-  source: string;
-  excerpt: string;
-};
-
 export default async function FoundationEntryPage({
   params,
 }: {
@@ -32,34 +26,34 @@ export default async function FoundationEntryPage({
 
   const slug = params.slug;
 
-  // 1) Fetch the entry ONLY (no joins, no embeds)
+  // 1) Entry
   const { data: entry, error: entryErr } = await supabase
-    .from('foundations_entries')
+    .from('philosophy_entries')
     .select('id,slug,era,title,subtitle,context,question')
     .eq('slug', slug)
     .maybeSingle<Entry>();
 
-  if (entryErr) {
-    // helpful during dev; you can soften later
-    throw new Error(entryErr.message);
-  }
-
+  if (entryErr) throw new Error(entryErr.message);
   if (!entry) notFound();
 
-  // 2) Fetch excerpts separately (so missing excerpts doesn't 404 the whole page)
-  const { data: excerpts } = await supabase
-    .from('foundations_excerpts')
+  // 2) Excerpts (safe if none exist)
+  const { data: excerpts, error: exErr } = await supabase
+    .from('philosophy_excerpts')
     .select('id,source,excerpt')
     .eq('entry_id', entry.id)
     .order('created_at', { ascending: true });
 
-  // 3) Fetch the user’s reflection separately (optional)
-  const { data: reflectionRow } = await supabase
-    .from('foundations_reflections')
-    .select('id,reflection')
+  if (exErr) throw new Error(exErr.message);
+
+  // 3) Reflection (optional)
+  const { data: reflectionRow, error: reflErr } = await supabase
+    .from('philosophy_reflections')
+    .select('id,body')
     .eq('user_id', userData.user.id)
     .eq('entry_id', entry.id)
     .maybeSingle();
+
+  if (reflErr) throw new Error(reflErr.message);
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-10">
@@ -90,13 +84,16 @@ export default async function FoundationEntryPage({
 
       <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Primary Text
+          Primary text
         </div>
 
         {excerpts && excerpts.length > 0 ? (
           <div className="mt-4 space-y-5">
             {excerpts.map((ex: any) => (
-              <figure key={ex.id} className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
+              <figure
+                key={ex.id}
+                className="rounded-xl border border-neutral-100 bg-neutral-50 p-4"
+              >
                 <blockquote className="text-sm leading-relaxed text-neutral-800">
                   {ex.excerpt}
                 </blockquote>
@@ -107,9 +104,7 @@ export default async function FoundationEntryPage({
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-neutral-600">
-            No excerpts added yet.
-          </p>
+          <p className="mt-3 text-sm text-neutral-600">No excerpts added yet.</p>
         )}
       </section>
 
@@ -129,11 +124,7 @@ export default async function FoundationEntryPage({
         </p>
 
         <div className="mt-4">
-          <ReflectionEditor
-  entryId={entry.id}
-  initialBody={reflectionRow?.reflection ?? ''}
-/>
-
+          <ReflectionEditor entryId={entry.id} initialBody={reflectionRow?.body ?? ''} />
         </div>
       </section>
     </main>
