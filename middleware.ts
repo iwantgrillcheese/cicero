@@ -2,11 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(req: NextRequest) {
-  let res = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  });
+  const res = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,20 +21,12 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // This call refreshes the session if needed and ensures cookies are set.
+  // This is the key line: it refreshes/rehydrates session cookies
   await supabase.auth.getUser();
 
   return res;
 }
 
 export const config = {
-  matcher: [
-    /*
-      Run middleware on all routes except:
-      - next static assets
-      - image optimization
-      - favicon
-    */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
