@@ -5,11 +5,14 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
 
-  if (!code) {
-    return NextResponse.redirect(new URL('/login', url.origin));
-  }
+  const res = NextResponse.json({
+    ok: false,
+    step: 'received_request',
+    hasCode: !!code,
+    url: url.toString(),
+  });
 
-  const res = NextResponse.redirect(new URL('/today', url.origin));
+  if (!code) return res;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +31,11 @@ export async function GET(req: NextRequest) {
     }
   );
 
-  await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  return res;
+  return NextResponse.json({
+    ok: !error,
+    step: 'exchanged_code',
+    error: error?.message ?? null,
+  }, { headers: res.headers });
 }
