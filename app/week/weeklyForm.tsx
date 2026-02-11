@@ -13,7 +13,7 @@ export default function WeeklyForm({
 }: {
   weekStartISO: string;
   virtues: string[];
-  initial: any | null;
+  initial: { q1?: string | null; q2?: string | null; q3?: string | null; q4?: string | null } | null;
 }) {
   const [q1, setQ1] = useState(initial?.q1 ?? '');
   const [q2, setQ2] = useState(initial?.q2 ?? '');
