@@ -11,8 +11,14 @@ export async function supabaseServer() {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
+        // In Server Components, Next.js forbids mutating cookies directly.
+        // Supabase may still attempt refresh writes on auth reads; ignore those here.
         cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
+          try {
+            cookieStore.set(name, value, options);
+          } catch {
+            // No-op: cookie writes belong in Route Handlers, Server Actions, or proxy.
+          }
         });
       },
     },
