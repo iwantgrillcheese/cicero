@@ -15,6 +15,12 @@ type Entry = {
   question: string;
 };
 
+type Excerpt = {
+  id: string;
+  source: string;
+  excerpt: string;
+};
+
 export default async function FoundationEntryPage({
   params,
 }: {
@@ -41,7 +47,8 @@ export default async function FoundationEntryPage({
     .from('philosophy_excerpts')
     .select('id,source,excerpt')
     .eq('entry_id', entry.id)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .returns<Excerpt[]>();
 
   if (exErr) throw new Error(exErr.message);
 
@@ -89,7 +96,7 @@ export default async function FoundationEntryPage({
 
         {excerpts && excerpts.length > 0 ? (
           <div className="mt-4 space-y-5">
-            {excerpts.map((ex: any) => (
+            {excerpts.map((ex: Excerpt) => (
               <figure
                 key={ex.id}
                 className="rounded-xl border border-neutral-100 bg-neutral-50 p-4"

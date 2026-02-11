@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
-export default function CompassForm({ initial }: { initial: any | null }) {
+type CompassRecord = { full_potential?: string | null; wasted_life?: string | null; commitments?: string[] | null };
+
+export default function CompassForm({ initial }: { initial: CompassRecord | null }) {
   const [fullPotential, setFullPotential] = useState(initial?.full_potential ?? '');
   const [wastedLife, setWastedLife] = useState(initial?.wasted_life ?? '');
   const [commitments, setCommitments] = useState<string[]>(
