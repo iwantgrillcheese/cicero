@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { getServerSupabaseAnonKey, getServerSupabaseUrl } from '@/lib/supabase-env';
 
 const PUBLIC_PATH_PREFIXES = ['/login', '/auth/callback'];
 const PUBLIC_EXACT_PATHS = ['/', '/favicon.ico'];
@@ -21,11 +22,14 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let url: string;
+  let anonKey: string;
 
-  // Avoid middleware failure loops when env vars are unavailable.
-  if (!url || !anonKey) {
+  try {
+    url = getServerSupabaseUrl();
+    anonKey = getServerSupabaseAnonKey();
+  } catch {
+    // Avoid proxy failure loops when env vars are unavailable.
     return NextResponse.next();
   }
 
